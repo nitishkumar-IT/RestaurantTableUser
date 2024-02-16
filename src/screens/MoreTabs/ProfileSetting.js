@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,14 +7,50 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-const onSavePressed = () => {
-  // Handle save logic here
-};
+import { firebase } from '../../../firebaseConfig';
 
 const ProfileSetting = () => {
+  const [user, setUser] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const userUid = firebase.auth().currentUser.uid;
+        const snapshot = await firebase.database().ref(`users/${userUid}`).once('value');
+        const userData = snapshot.val();
+        if (userData) {
+          setUser(userData);
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error.message);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
+  const handleEdit = () => {
+    setIsEditing(true);
+  };
+
+  const handleSave = async () => {
+    setIsEditing(false);
+
+    try {
+      const userUid = firebase.auth().currentUser.uid;
+      await firebase.database().ref(`users/${userUid}`).set(user);
+
+      Alert.alert('Success', 'Profile saved successfully!');
+    } catch (error) {
+      console.error('Error saving profile:', error.message);
+      Alert.alert('Error', 'Failed to save profile. Please try again.');
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollViewContainer}>
@@ -24,28 +60,59 @@ const ProfileSetting = () => {
 
         <View style={styles.profileInfoContainer}>
           <Image
-            source={require('../../assets/ProfileIcons/Profile.png')} // Replace with your image path
+            source={{ uri: user?.profileImage || 'placeholder_image_url' }}
             style={styles.profileImage}
           />
-          <View style={styles.cameraOverlay}>
+          <TouchableOpacity style={styles.cameraOverlay}>
             <Image
-              source={require('../../assets/ProfileIcons/Profile.png')} // Replace with your image path
+              source={require('../../assets/ProfileIcons/Profile.png')} // Placeholder camera icon
               style={styles.cameraIcon}
             />
-          </View>
+          </TouchableOpacity>
         </View>
 
-        <Text style={styles.greetingText}>Hi there Nitish!</Text>
+        <Text style={styles.greetingText}>{`Hi there ${user?.name || ''}!`}</Text>
 
-        {/* Other form inputs */}
-        <CustomFormInput label="Name" value="Nitishkumar" borderStyle={styles.inputContainer} />
-        <CustomFormInput label="Email" value="nitishkumarofficial19@email.com" borderStyle={styles.inputContainer} />
-        <CustomFormInput label="Mobile No" value="4313465434" borderStyle={styles.inputContainer} />
-        <CustomFormInput label="Date of Birth" value="2001-01-01" isDateInput={true} borderStyle={styles.inputContainer} />
-        <CustomFormInput label="Password" value="Nitishkumar@2001" isPassword={true} borderStyle={styles.inputContainer} />
-        
+        <CustomFormInput
+          label="Name"
+          value={user?.name || ''}
+          isEditing={isEditing}
+          onChangeText={(text) => setUser({ ...user, name: text })}
+          borderStyle={styles.inputContainer}
+        />
+        <CustomFormInput
+          label="Email"
+          value={user?.email || ''}
+          isEditing={isEditing}
+          onChangeText={(text) => setUser({ ...user, email: text })}
+          borderStyle={styles.inputContainer}
+        />
+        <CustomFormInput
+          label="Mobile No"
+          value={user?.mobileNo || ''}
+          isEditing={isEditing}
+          onChangeText={(text) => setUser({ ...user, mobileNo: text })}
+          borderStyle={styles.inputContainer}
+        />
+        <CustomFormInput
+          label="Date of Birth"
+          value={user?.dateOfBirth || ''}
+          isEditing={isEditing}
+          onChangeText={(text) => setUser({ ...user, dateOfBirth: text })}
+          isDateInput={true}
+          borderStyle={styles.inputContainer}
+        />
+        <CustomFormInput
+          label="Password"
+          value={user?.password || ''}
+          isEditing={isEditing}
+          onChangeText={(text) => setUser({ ...user, password: text })}
+          isPassword={true}
+          borderStyle={styles.inputContainer}
+        />
+
         <View style={styles.saveButtonContainer}>
-          <TouchableOpacity style={styles.saveButton} onPress={onSavePressed}>
+          <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
             <Text style={styles.saveButtonText}>Save</Text>
           </TouchableOpacity>
         </View>
@@ -54,19 +121,7 @@ const ProfileSetting = () => {
   );
 };
 
-const CustomFormInput = ({ label, value, isPassword, borderStyle }) => {
-  const [inputValue, setInputValue] = useState(value); // Use state to manage input value
-  const [isEditing, setIsEditing] = useState(false);
-
-  const handleEdit = () => {
-    setIsEditing(true);
-  };
-
-  const handleSave = () => {
-    setIsEditing(false);
-    // Handle saving the updated value here, for example, by calling an API or updating a state variable.
-  };
-
+const CustomFormInput = ({ label, value, isEditing, isPassword, isDateInput, onChangeText, borderStyle }) => {
   return (
     <View style={borderStyle}>
       {isEditing ? (
@@ -75,18 +130,18 @@ const CustomFormInput = ({ label, value, isPassword, borderStyle }) => {
             style={styles.input}
             placeholder={label}
             secureTextEntry={isPassword}
-            value={inputValue} // Use state variable here
-            onChangeText={(text) => setInputValue(text)} // Update state variable on change
+            value={value}
+            onChangeText={onChangeText}
           />
-          <TouchableOpacity style={styles.editButton} onPress={handleSave}>
+          <TouchableOpacity style={styles.editButton} onPress={() => onChangeText(value)}>
             <Text style={styles.editButtonText}>Save</Text>
           </TouchableOpacity>
         </View>
       ) : (
         <View style={styles.inputLabelContainer}>
           <Text style={styles.inputLabel}>{label}</Text>
-          <Text style={styles.inputValue}>{inputValue}</Text>
-          <TouchableOpacity style={styles.editButton} onPress={handleEdit}>
+          <Text style={styles.inputValue}>{isDateInput ? new Date(value).toDateString() : value}</Text>
+          <TouchableOpacity style={styles.editButton} onPress={() => onChangeText(value)}>
             <Text style={styles.editButtonText}>Edit</Text>
           </TouchableOpacity>
         </View>
@@ -94,100 +149,63 @@ const CustomFormInput = ({ label, value, isPassword, borderStyle }) => {
     </View>
   );
 };
+
 const styles = StyleSheet.create({
   container: {
-   flex: 1,
- },
- scrollViewContainer: {
-   paddingHorizontal: 20,
- },
- header: {
-   marginTop: 20,
-   flexDirection: 'row',
-   justifyContent: 'space-between',
-   alignItems: 'center',
- },
- headerText: {
-   fontSize: 24,
-   fontWeight: 'bold',
- },
- cartIcon: {
-   width: 24,
-   height: 24,
- },
- profileInfoContainer: {
-   marginTop: 20,
-   alignItems: 'center',
- },
- profileImage: {
-   width: 80,
-   height: 80,
-   borderRadius: 40,
- },
- cameraOverlay: {
-   position: 'absolute',
-   bottom: 0,
-   width: 80,
-   backgroundColor: 'rgba(0,0,0,0.3)',
- },
- cameraIcon: {
-   width: 20,
-   height: 20,
-   alignSelf: 'center',
-   marginBottom: 5,
- },
- editProfileButton: {
-   flexDirection: 'row',
-   alignItems: 'center',
-   marginTop: 10,
- },
- editProfileIcon: {
-   width: 20,
-   height: 20,
- },
- greetingText: {
-   fontSize: 24,
-   color: 'black',
- },
- inputContainer: {
-   width: '100%',
-   height: '100',
-   padding: 10,
-   paddingStart: 20,
-   borderBottomRightRadius:10,
-   borderTopLeftRadius:10,
-   backgroundColor: 'white',
-   borderColor: 'black',
-   marginTop: 25,
- },
- input: {
-   fontSize: 10,
- },
- saveButtonContainer: {
-  marginTop: 40,
-  alignItems: 'center',
-},
-saveButton: {
-  backgroundColor: '#6F5060',
-  paddingVertical: 10,
-  paddingHorizontal: 100,
-  borderRadius: 10,
-},
-saveButtonText: {
-  fontSize: 16,
-  color: 'white',
-  fontWeight: 'bold',
-},
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  scrollViewContainer: {
+    paddingHorizontal: 20,
+  },
+  header: {
+    marginTop: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  profileInfoContainer: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  profileImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+  },
+  cameraOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    width: 80,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+  },
+  cameraIcon: {
+    width: 20,
+    height: 20,
+    alignSelf: 'center',
+    marginBottom: 5,
+  },
+  greetingText: {
+    fontSize: 24,
+    color: 'black',
+  },
   inputWithEdit: {
-    flex: 2,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     fontSize: 16,
   },
+  input: {
+    fontSize: 16,
+    flex: 1,
+  },
   editButton: {
     backgroundColor: '#6F5060',
-    padding: 5,
+    padding: 10,
     borderRadius: 5,
   },
   editButtonText: {
@@ -206,6 +224,29 @@ saveButtonText: {
   inputValue: {
     flex: 2,
     fontSize: 17,
+  },
+  inputContainer: {
+    width: '100%',
+    height: 60,
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'black',
+    marginTop: 25,
+  },
+  saveButtonContainer: {
+    marginTop: 40,
+    alignItems: 'center',
+  },
+  saveButton: {
+    backgroundColor: '#6F5060',
+    paddingVertical: 10,
+    paddingHorizontal: 100,
+    borderRadius: 10,
+  },
+  saveButtonText: {
+    fontSize: 16,
+    color: 'white',
+    fontWeight: 'bold',
   },
 });
 

@@ -82,15 +82,15 @@ export default function RegisterScreen({ navigation }) {
                 set(userRef, {
                   name: name,
                   phone: phone,
+                  email: email,
                 })
                   .then(() => {
                     console.log('User information saved to database successfully');
+                    navigation.navigate('LoginScreen');
                   })
                   .catch((error) => {
                     console.error('Error saving user information to database:', error);
                   });
-
-                navigation.navigate('LoginScreen');
               })
               .catch((error) => {
                 console.error('Error updating profile:', error);

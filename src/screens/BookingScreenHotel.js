@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
-import { Card } from 'react-native-paper';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
-import Icon from 'react-native-vector-icons/FontAwesome';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Picker } from '@react-native-picker/picker';
 
 const BookingScreenHotel = ({ route, navigation }) => {
@@ -14,16 +13,46 @@ const BookingScreenHotel = ({ route, navigation }) => {
   const [numPeople, setNumPeople] = useState('');
   const [isTimePickerVisible, setTimePickerVisibility] = useState(false);
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  useEffect(() => {
+    setTiming(getDefaultTime());
+    setDate(getDefaultDate());
+    setNumPeople(getDefaultNumPeople());
+    setPeopleType('');
+  }, []);
+
+  const getDefaultTime = () => {
+    const defaultTime = new Date();
+    defaultTime.setHours(defaultTime.getHours() + 1);
+    return defaultTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const getDefaultDate = () => {
+    const today = new Date();
+    return today;
+  };
+
+  const getDefaultNumPeople = () => {
+    return peopleType === 'Couples' ? '2' : '1';
+  };
 
   const handleBooking = () => {
+    if (!peopleType || !date || !timing || !numPeople) {
+      setErrorMessage('Please fill in all the information.');
+      return;
+    }
+
     const bookingDetails = {
       peopleType,
       timing,
-      date,
+      date: date.toISOString(),
       numPeople,
     };
+
+    setErrorMessage('');
     console.log('Booking Details:', bookingDetails);
-    navigation.navigate('ConfirmationScreen', { bookingDetails });
+    // You can customize the navigation destination or actions here
   };
 
   const showTimePicker = () => {
@@ -51,74 +80,54 @@ const BookingScreenHotel = ({ route, navigation }) => {
 
   const handleDateConfirm = (selectedDate) => {
     hideDatePicker();
+
     if (selectedDate) {
-      setDate(selectedDate);
+      const currentDate = new Date();
+      const fiveDaysLater = new Date();
+      fiveDaysLater.setDate(currentDate.getDate() + 5);
+
+      if (selectedDate >= currentDate && selectedDate <= fiveDaysLater) {
+        setDate(selectedDate);
+      } else {
+        setErrorMessage('Please select a date within the next 5 days.');
+      }
     }
   };
 
   const renderNumPeopleInput = () => {
-    if (peopleType === 'Couples') {
-      return (
-        <Picker
-          selectedValue={numPeople}
-          style={styles.input}
-          onValueChange={(itemValue) => setNumPeople(itemValue)}
-        >
-          {[...Array(5).keys()].map((num) => (
-            <Picker.Item key={2 * (num + 1)} label={(2 * (num + 1)).toString()} value={(2 * (num + 1)).toString()} />
-          ))}
-        </Picker>
-      );
-    } else if (peopleType === 'Family') {
-      return (
-        <Picker
-          selectedValue={numPeople}
-          style={styles.input}
-          onValueChange={(itemValue) => setNumPeople(itemValue)}
-        >
-          {[...Array(10).keys()].map((num) => (
-            <Picker.Item key={num + 1} label={(num + 1).toString()} value={(num + 1).toString()} />
-          ))}
-        </Picker>
-      );
-    } else if (peopleType === 'Friends') {
-      return (
-        <Picker
-          selectedValue={numPeople}
-          style={styles.input}
-          onValueChange={(itemValue) => setNumPeople(itemValue)}
-        >
-          {[...Array(10).keys()].map((num) => (
-            <Picker.Item key={num + 1} label={(num + 1).toString()} value={(num + 1).toString()} />
-          ))}
-        </Picker>
-      );
-    } else {
-      return (
-        <TextInput
-          placeholder={`Number of ${peopleType}`}
-          style={styles.input}
-          value={numPeople}
-          onChangeText={(text) => setNumPeople(text)}
-          keyboardType="numeric"
-          editable={peopleType !== ''}
-        />
-      );
-    }
+    const maxPeople = peopleType === 'Couples' ? 8 : 15;
+    const peopleArray = [...Array(maxPeople).keys()].map((num) => num + 1);
+
+    return (
+      <Picker
+        selectedValue={numPeople}
+        style={styles.picker}
+        itemStyle={styles.pickerItem}
+        onValueChange={(itemValue) => setNumPeople(itemValue)}
+      >
+        {peopleArray.map((num) => (
+          <Picker.Item key={num} label={num.toString()} value={num.toString()} />
+        ))}
+      </Picker>
+    );
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.heading}>{hotel.hotelName}</Text>
+    <ScrollView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.heading}>Book a Table</Text>
+        <Text style={styles.subHeading}>at {hotel.hotelName}</Text>
+      </View>
 
-      <Card style={styles.card}>
-        <View style={styles.cardContent}>
-          <Icon name="user" size={25} color="#3498db" style={styles.icon} />
-          <Text style={styles.cardText}>Select People Type</Text>
+      <View style={styles.card}>
+        <View style={styles.iconLabelContainer}>
+          <Icon name="account-group" size={25} color="#E91E63" style={styles.icon} />
+          <Text style={styles.label}>Select Group Type</Text>
         </View>
         <Picker
           selectedValue={peopleType}
-          style={styles.input}
+          style={styles.picker}
+          itemStyle={styles.pickerItem}
           onValueChange={(itemValue) => setPeopleType(itemValue)}
         >
           <Picker.Item label="Select" value="" />
@@ -126,12 +135,12 @@ const BookingScreenHotel = ({ route, navigation }) => {
           <Picker.Item label="Friends" value="Friends" />
           <Picker.Item label="Family" value="Family" />
         </Picker>
-      </Card>
+      </View>
 
-      <Card style={styles.card}>
-        <View style={styles.cardContent}>
-          <Icon name="calendar" size={25} color="#e74c3c" style={styles.icon} />
-          <Text style={styles.cardText}>Select Date</Text>
+      <View style={styles.card}>
+        <View style={styles.iconLabelContainer}>
+          <Icon name="calendar-clock" size={25} color="#2196F3" style={styles.icon} />
+          <Text style={styles.label}>Select Date</Text>
         </View>
         <TouchableOpacity onPress={showDatePicker} style={styles.input}>
           <Text>{date.toDateString()}</Text>
@@ -141,13 +150,15 @@ const BookingScreenHotel = ({ route, navigation }) => {
           mode="date"
           onConfirm={handleDateConfirm}
           onCancel={hideDatePicker}
+          minimumDate={new Date()}
+          maximumDate={new Date().setDate(new Date().getDate() + 5)}
         />
-      </Card>
+      </View>
 
-      <Card style={styles.card}>
-        <View style={styles.cardContent}>
-          <Icon name="clock-o" size={25} color="#2ecc71" style={styles.icon} />
-          <Text style={styles.cardText}>Select Timing</Text>
+      <View style={styles.card}>
+        <View style={styles.iconLabelContainer}>
+          <Icon name="clock-time-four-outline" size={25} color="#FFC107" style={styles.icon} />
+          <Text style={styles.label}>Select Time</Text>
         </View>
         <TouchableOpacity onPress={showTimePicker} style={styles.input}>
           <Text>{timing || 'Select Time'}</Text>
@@ -158,83 +169,98 @@ const BookingScreenHotel = ({ route, navigation }) => {
           onConfirm={handleTimeConfirm}
           onCancel={hideTimePicker}
         />
-      </Card>
+      </View>
 
-      <Card style={styles.card}>
-        <View style={styles.cardContent}>
-          <Icon name="users" size={25} color="#f39c12" style={styles.icon} />
-          <Text style={styles.cardText}>Number of People</Text>
+      <View style={styles.card}>
+        <View style={styles.iconLabelContainer}>
+          <Icon name="account-multiple" size={25} color="#4CAF50" style={styles.icon} />
+          <Text style={styles.label}>Number of Guests</Text>
         </View>
         {renderNumPeopleInput()}
-      </Card>
+      </View>
 
       <TouchableOpacity style={styles.animatedButton} onPress={handleBooking}>
         <Icon name="arrow-right" size={30} color="#fff" />
       </TouchableOpacity>
-    </View>
+
+      {errorMessage ? <Text style={styles.errorMessage}>{errorMessage}</Text> : null}
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#F5F5F5',
+  },
+  header: {
+    backgroundColor: '#6F5060',
+    padding: 20,
+    paddingBottom: 10,
   },
   heading: {
-    fontSize: 29,
+    fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 20,
-    color: '#6F5060',
+    color: '#FFFFFF',
+  },
+  subHeading: {
+    fontSize: 18,
+    color: '#333',
+  },
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    margin: 20,
+    padding: 15,
+    elevation: 5,
+  },
+  iconLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  icon: {
+    marginRight: 10,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
   },
   input: {
+    height: 30,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+    color: '#333',
+    marginTop: 10,
+    marginBottom: 20,
+   
+  },
+  picker: {
     height: 40,
     width: '100%',
     borderBottomWidth: 1,
     borderBottomColor: '#333',
-    marginLeft: 25,
     color: '#333',
+    marginBottom: 10,
   },
-  card: {
-    width: '100%',
-    height: '18%',
-    marginBottom: 16,
-    borderRadius: 16,
-    padding: 10,
-    elevation: 2,
-    backgroundColor: '#fff',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  cardContent: {
-    flex: 1,
-    marginRight: 19,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  cardText: {
-    fontSize: 18,
+  pickerItem: {
+    fontSize: 16,
     fontWeight: 'bold',
-    marginLeft: 20,
-    color: '#333',
   },
   animatedButton: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-    borderRadius: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 60,
-    height: 60,
-    backgroundColor: '#6F5060',
+    alignSelf: 'flex-end',
+    margin: 20,
+    padding: 10,
+    borderRadius: 8,
+    backgroundColor: '#FF5722',
   },
-  icon: {
-    marginLeft: 25,
+  errorMessage: {
+    color: 'red',
+    textAlign: 'center',
+    margin: 10,
   },
 });
 
-export default BookingScreenHotel;;
+export default BookingScreenHotel;
+
