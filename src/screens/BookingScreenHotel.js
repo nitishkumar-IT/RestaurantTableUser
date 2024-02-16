@@ -5,7 +5,9 @@ import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { Picker } from '@react-native-picker/picker';
 
-const BookingScreen = ({ navigation }) => {
+const BookingScreenHotel = ({ route, navigation }) => {
+  const { hotel } = route.params;
+
   const [peopleType, setPeopleType] = useState('');
   const [timing, setTiming] = useState('');
   const [date, setDate] = useState(new Date());
@@ -79,6 +81,18 @@ const BookingScreen = ({ navigation }) => {
           ))}
         </Picker>
       );
+    } else if (peopleType === 'Friends') {
+      return (
+        <Picker
+          selectedValue={numPeople}
+          style={styles.input}
+          onValueChange={(itemValue) => setNumPeople(itemValue)}
+        >
+          {[...Array(10).keys()].map((num) => (
+            <Picker.Item key={num + 1} label={(num + 1).toString()} value={(num + 1).toString()} />
+          ))}
+        </Picker>
+      );
     } else {
       return (
         <TextInput
@@ -95,7 +109,7 @@ const BookingScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.heading}>Book a Table</Text>
+      <Text style={styles.heading}>{hotel.hotelName}</Text>
 
       <Card style={styles.card}>
         <View style={styles.cardContent}>
@@ -167,7 +181,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#f9f9f9', // Set a background color if needed
+    backgroundColor: '#f9f9f9',
   },
   heading: {
     fontSize: 29,
@@ -181,7 +195,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#333',
     marginLeft: 25,
-    color: '#333', // Adjust text color as needed
+    color: '#333',
   },
   card: {
     width: '100%',
@@ -223,4 +237,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default BookingScreen;
+export default BookingScreenHotel;;
